@@ -44,6 +44,7 @@ This repository contains CLI utilities for exploring document-parsing services (
 | `DOCLING_MAX_TOKEN_PER_CHUNK` | Integer cap for Docling chunk tokens. |
 | `DOCLING_POLL_INTERVAL` | Seconds between Docling status checks. |
 | `DOCLING_POLL_ATTEMPTS` | Number of Docling polls before timing out. |
+| `DOCLING_START_TIMEOUT` / `DOCLING_RESULT_TIMEOUT` | Request timeouts (seconds) for Docling start/result calls. |
 | `LLMSHERPA_URL` | Base URL for your LLM Sherpa service (e.g., `https://llmsherpa.yourdomain/api`). |
 | `LLMSHERPA_ENV` | Selects which CBAI endpoint to use for LLM Sherpa (`TST`, `PPD`, `PRD`). |
 | `LLMSHERPA_URL` | Optional override for the base path (defaults to the env-specific `/cbai/v1/llm_sherpa`). |

@@ -104,26 +104,34 @@ class LLMSherpaClient:
 def main() -> None:
     base_url, api_key, env_name = resolve_llmsherpa_credentials()
     endpoint = os.getenv("LLMSHERPA_ENDPOINT", "parsing/")
-    extra_params = parse_extra_params(os.getenv("LLMSHERPA_QUERY"))
-    pdf_path = os.getenv("LLMSHERPA_PDF_PATH", r"data/sample.pdf")
+    extra_params = parse_extra_params(get_env_value("LLMSHERPA_QUERY"))
+    pdf_path = read_path("LLMSHERPA_PDF_PATH", "data/sample.pdf")
     experiment_label = os.getenv("RUN_LABEL")
     run_notes = os.getenv("RUN_NOTES", "")
+    timeout = read_int("LLMSHERPA_TIMEOUT", 120) or 120
 
-    client = LLMSherpaClient(base_url, api_key, endpoint=endpoint, extra_params=extra_params)
+    client = LLMSherpaClient(
+        base_url,
+        api_key,
+        endpoint=endpoint,
+        extra_params=extra_params,
+        timeout=timeout,
+    )
     settings = SherpaSettings(
-        preserve_layout=_str_to_bool(os.getenv("LLMSHERPA_PRESERVE_LAYOUT", "true")),
-        chunk_token_size=_optional_int(os.getenv("LLMSHERPA_CHUNK_SIZE"), default=800),
-        overlap_tokens=_optional_int(os.getenv("LLMSHERPA_CHUNK_OVERLAP"), default=100),
+        preserve_layout=read_bool("LLMSHERPA_PRESERVE_LAYOUT", True),
+        chunk_token_size=read_int("LLMSHERPA_CHUNK_SIZE", default=800) or 800,
+        overlap_tokens=read_int("LLMSHERPA_CHUNK_OVERLAP", default=100) or 100,
     )
 
     logging.info(
-        "LLM Sherpa ENV=%s | URL=%s/%s | PDF=%s | Settings=%s | params=%s | Run=%s",
+        "LLM Sherpa ENV=%s | URL=%s/%s | PDF=%s | Settings=%s | params=%s | Timeout=%ss | Run=%s",
         env_name,
         base_url,
         endpoint,
         pdf_path,
         settings,
         extra_params,
+        timeout,
         experiment_label or "<none>",
     )
     start = time.perf_counter()
@@ -145,21 +153,6 @@ def main() -> None:
     )
     logging.info("Saved LLM Sherpa payload to %s", result_path)
     logging.info("Appended LLM Sherpa metrics to %s", metrics_path)
-
-
-def _optional_int(raw_value: str | None, default: int) -> int:
-    if not raw_value:
-        return default
-    try:
-        return int(raw_value)
-    except ValueError:
-        logging.warning("Expected integer but received '%s', falling back to %s", raw_value, default)
-        return default
-
-
-def _str_to_bool(value: str) -> bool:
-    value = (value or "").strip().lower()
-    return value in {"1", "true", "yes", "on"}
 
 
 def resolve_llmsherpa_credentials() -> tuple[str, str | None, str]:
