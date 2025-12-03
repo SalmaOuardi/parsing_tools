@@ -45,13 +45,17 @@ This repository contains CLI utilities for exploring document-parsing services (
 | `DOCLING_POLL_INTERVAL` | Seconds between Docling status checks. |
 | `DOCLING_POLL_ATTEMPTS` | Number of Docling polls before timing out. |
 | `LLMSHERPA_URL` | Base URL for your LLM Sherpa service (e.g., `https://llmsherpa.yourdomain/api`). |
-| `LLMSHERPA_API_KEY` | API key/token for LLM Sherpa (if required). |
-| `LLMSHERPA_API_KEY_VAR` | Optional override pointing to a different env var. |
+| `LLMSHERPA_ENV` | Selects which CBAI endpoint to use for LLM Sherpa (`TST`, `PPD`, `PRD`). |
+| `LLMSHERPA_URL` | Optional override for the base path (defaults to the env-specific `/cbai/v1/llm_sherpa`). |
+| `LLMSHERPA_API_KEY_VAR` | Env var that stores the LLM Sherpa key (defaults to the matching `CBAI_API_KEY_*`). |
+| `LLMSHERPA_ENDPOINT` | Relative endpoint appended to the base URL (`parsing/`, `passthrough/api/...`, etc.). |
+| `LLMSHERPA_QUERY` | URL-encoded query string for additional Sherpa parameters (`renderFormat=all&applyOcr=no`). |
 | `LLMSHERPA_PDF_PATH` | PDF path used by `llmsherpa_parsing.py`. |
 | `LLMSHERPA_PRESERVE_LAYOUT` | `true/false` to keep layout metadata. |
 | `LLMSHERPA_CHUNK_SIZE` | Chunk token size for Sherpa responses. |
 | `LLMSHERPA_CHUNK_OVERLAP` | Token overlap between Sherpa chunks. |
 | `LLMSHERPA_TIMEOUT` | Request timeout (seconds) for Sherpa calls. |
+| `RUN_LABEL` / `RUN_NOTES` | Optional experiment identifiers recorded in filenames and `metrics.csv` for later analysis. |
 
 ### Run the Docling CLI
 
@@ -75,6 +79,13 @@ uv run python src/llmsherpa_parsing.py
 
 This script pushes the PDF (plus layout/chunking preferences) to an LLM Sherpa endpoint and prints back the structured response for quick inspection.
 It also writes the payload under `data/results/llmsherpa_<pdf>_<timestamp>.json` and appends timing/metadata to the shared metrics CSV so you can compare parsers run-by-run.
+Use `LLMSHERPA_ENV` (`TST`, `PPD`, `PRD`) to switch between CBAI environments, or provide a custom `LLMSHERPA_URL`/`LLMSHERPA_ENDPOINT` for passthrough calls (e.g., `/passthrough/api/parseDocument?renderFormat=all`).
+
+### Tracking Experiments
+
+- Every run stores the raw payload in `data/results/<parser>_<pdf>_<timestamp>_{RUN_LABEL}.json`.
+- `data/results/metrics.csv` aggregates timings, chunk counts, environments, and notes for both parsers so you can pivot/sort later.
+- Set `RUN_LABEL` for the experiment name (e.g., `docling-1500-vs-sherpa`) and `RUN_NOTES` for extra context (`"Docling chunk=1500 | Sherpa default"`). These values propagate to filenames and the metrics CSV.
 
 ### Troubleshooting
 

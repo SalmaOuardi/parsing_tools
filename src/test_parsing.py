@@ -235,15 +235,18 @@ def main() -> None:
     pdf_path = os.getenv("DOCLING_PDF_PATH", r"data\reseau ASF.pdf")
     poll_interval = float(os.getenv("DOCLING_POLL_INTERVAL", "5"))
     max_attempts = int(os.getenv("DOCLING_POLL_ATTEMPTS", "40"))
+    experiment_label = os.getenv("RUN_LABEL")
+    run_notes = os.getenv("RUN_NOTES", "")
 
     client = DoclingClient(docling_url, docling_api_key)
     pdf_settings = build_pdf_settings_from_env()
     logging.info(
-        "Docling ENV=%s | URL=%s | PDF=%s | Settings=%s",
+        "Docling ENV=%s | URL=%s | PDF=%s | Settings=%s | Run=%s",
         env_name,
         docling_url,
         pdf_path,
         pdf_settings,
+        experiment_label or "<none>",
     )
 
     start = time.perf_counter()
@@ -256,13 +259,15 @@ def main() -> None:
     duration = time.perf_counter() - start
     logging.info("Docling final result: %s", json.dumps(final_result, indent=2))
 
-    result_path = save_json_payload("docling", pdf_path, final_result)
+    result_path = save_json_payload("docling", pdf_path, final_result, experiment=experiment_label)
     metrics_path = append_metrics(
         "docling",
         pdf_path,
         final_result,
         duration,
-        extra={"notes": env_name},
+        parser_env=env_name,
+        experiment=experiment_label,
+        extra={"notes": run_notes or env_name},
     )
     logging.info("Saved Docling payload to %s", result_path)
     logging.info("Appended Docling metrics to %s", metrics_path)
