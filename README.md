@@ -1,0 +1,95 @@
+## PDF Parsing Playground
+
+This repository contains CLI utilities for exploring document-parsing services (Docling and LLM Sherpa) as part of a retrieval-augmented generation (RAG) workflow. Each script sends a PDF to the respective service, handles authentication/polling, and logs the structured output so you can experiment locally without exposing private client infrastructure.
+
+### Prerequisites
+
+- Python 3.11.x
+- [`uv`](https://github.com/astral-sh/uv) for dependency management
+
+### Setup
+
+1. Install dependencies:
+
+   ```powershell
+   uv pip install -r pyproject.toml
+   ```
+
+2. Create a `.env` file (based on `.env.example`) and add your API keys + runtime overrides. Example:
+
+   ```dotenv
+   CBAI_API_KEY_TST="..."
+   CBAI_API_KEY_PPD="..."
+   CBAI_API_KEY_PRD="..."
+
+   DOCLING_ENV=TST
+   DOCLING_PDF_PATH="data/reseau ASF.pdf"
+   DOCLING_POLL_INTERVAL=10
+   DOCLING_POLL_ATTEMPTS=120
+   ```
+
+### Environment Variables
+
+| Variable | Description |
+| --- | --- |
+| `DOCLING_URL` | Base URL for the Docling API you control (e.g., `https://your-docling-host/v1/docling`). |
+| `DOCLING_API_KEY` | API key/token for the Docling endpoint. |
+| `DOCLING_API_KEY_VAR` | Optional override to read the Docling key from a different env var. |
+| `DOCLING_ENV` | Free-form label used only for logging (`TST`, `PPD`, `local`, etc.). |
+| `DOCLING_PDF_PATH` | PDF path used by `test_parsing.py`. |
+| `DOCLING_EXPORT_TYPE` | Docling export format (`markdown`, `json`). |
+| `DOCLING_CHUNKING_TYPE` | Docling chunking strategy (`hybrid`, `none`, etc.). |
+| `DOCLING_PICTURE_MODEL` | Optional Docling model for picture descriptions. |
+| `DOCLING_PICTURE_PROMPT` | Picture description prompt. |
+| `DOCLING_MAX_TOKEN_PER_CHUNK` | Integer cap for Docling chunk tokens. |
+| `DOCLING_POLL_INTERVAL` | Seconds between Docling status checks. |
+| `DOCLING_POLL_ATTEMPTS` | Number of Docling polls before timing out. |
+| `LLMSHERPA_URL` | Base URL for your LLM Sherpa service (e.g., `https://llmsherpa.yourdomain/api`). |
+| `LLMSHERPA_API_KEY` | API key/token for LLM Sherpa (if required). |
+| `LLMSHERPA_API_KEY_VAR` | Optional override pointing to a different env var. |
+| `LLMSHERPA_PDF_PATH` | PDF path used by `llmsherpa_parsing.py`. |
+| `LLMSHERPA_PRESERVE_LAYOUT` | `true/false` to keep layout metadata. |
+| `LLMSHERPA_CHUNK_SIZE` | Chunk token size for Sherpa responses. |
+| `LLMSHERPA_CHUNK_OVERLAP` | Token overlap between Sherpa chunks. |
+| `LLMSHERPA_TIMEOUT` | Request timeout (seconds) for Sherpa calls. |
+
+### Run the Docling CLI
+
+```powershell
+uv run python src/test_parsing.py
+```
+
+Flow overview:
+
+1. Selects the Docling environment (`DOCLING_URL` + key) and logs the current settings.
+2. Uploads the PDF to `/start-parsing/`. If Docling finishes inline, the final payload is printed immediately.
+3. Otherwise polls `/result-parsing/{task_id}` until completion or until the configured timeout is exceeded.
+4. Logs the final JSON, including chunk metadata ready for downstream RAG steps.
+
+### Run the LLM Sherpa CLI
+
+```powershell
+uv run python src/llmsherpa_parsing.py
+```
+
+This script pushes the PDF (plus layout/chunking preferences) to an LLM Sherpa endpoint and prints back the structured response for quick inspection.
+
+### Troubleshooting
+
+- **Auth errors**: Confirm your `*_API_KEY` matches the URL you’re calling and that the header/query format matches what your deployment expects.
+- **Long PDFs**: Increase `DOCLING_POLL_INTERVAL`/`DOCLING_POLL_ATTEMPTS` or Sherpa chunk sizes for better throughput.
+- **Different endpoints**: Override `DOCLING_URL` or `LLMSHERPA_URL` to point at staging/local servers without editing the source.
+
+### Project Structure
+
+- `src/test_parsing.py` – Docling helper CLI (async poll + settings builder).
+- `src/llmsherpa_parsing.py` – LLM Sherpa helper CLI (synchronous extraction).
+- `src/env_utils.py` – shared helpers for `.env` loading and key lookup.
+- `data/` – sample PDFs (ignored from Git). Bring your own documents.
+- `pyproject.toml` – dependency definitions managed by `uv`.
+
+### Contributing
+
+- Keep actual credentials in `.env`; share sanitized examples via `.env.example`.
+- Use `uv` for dependency management and add tests/linters as the playground grows.
+- Feel free to extend either CLI or add adapters for additional parsers in the RAG toolchain.
