@@ -9,7 +9,7 @@ from typing import Any
 
 import requests
 
-from env_utils import get_env_value, load_env
+from env_utils import get_env_value, load_env, read_float, read_int, read_path
 from result_exporter import append_metrics, save_json_payload
 
 '''
@@ -73,14 +73,22 @@ class PdfSettings:
 
 
 class DoclingClient:
-    def __init__(self, base_url: str, api_key: str):
+    def __init__(
+        self,
+        base_url: str,
+        api_key: str,
+        start_timeout: int = 120,
+        result_timeout: int = 60,
+    ):
         self.base_url = base_url.rstrip("/")
         self.api_key = api_key
+        self.start_timeout = start_timeout
+        self.result_timeout = result_timeout
         self._session = requests.Session()
 
     def start_parsing(self, pdf_path: str | Path, pdf_settings: PdfSettings) -> dict[str, Any]:
         """Send the PDF to the Docling REST API."""
-        pdf_path = Path(pdf_path)
+        pdf_path = Path(pdf_path).expanduser()
         if not pdf_path.exists():
             raise FileNotFoundError(f"PDF file not found: {pdf_path}")
 
@@ -95,7 +103,7 @@ class DoclingClient:
                 headers={"Accept": "application/json"},
                 data={"settings": json.dumps(payload)},
                 files=files,
-                timeout=120,
+                timeout=self.start_timeout,
             )
         return self._handle_response(response, "Docling start failed")
 
@@ -107,7 +115,7 @@ class DoclingClient:
             url,
             params=params,
             headers={"Accept": "application/json"},
-            timeout=60,
+            timeout=self.result_timeout,
         )
         return self._handle_response(response, "Docling result failed")
 
@@ -194,23 +202,20 @@ def build_pdf_settings_from_env() -> PdfSettings:
     return PdfSettings(
         export_type=_choice_from_env("DOCLING_EXPORT_TYPE", ExportType, ExportType.MARKDOWN),
         chunking_type=_choice_from_env("DOCLING_CHUNKING_TYPE", ChunkingType, ChunkingType.HYBRID),
-        picture_description_model=os.getenv("DOCLING_PICTURE_MODEL", ""),
-        picture_description_prompt=os.getenv(
-            "DOCLING_PICTURE_PROMPT",
-            "Describe the image in French in three sentences. Be consise and accurate.",
-        ),
-        max_token_per_chunk=_optional_int(os.getenv("DOCLING_MAX_TOKEN_PER_CHUNK"), default=7500),
+        picture_description_model=_empty_to_none(get_env_value("DOCLING_PICTURE_MODEL")),
+        picture_description_prompt=_empty_to_none(
+            get_env_value("DOCLING_PICTURE_PROMPT")
+        )
+        or "Describe the image in French in three sentences. Be concise and accurate.",
+        max_token_per_chunk=read_int("DOCLING_MAX_TOKEN_PER_CHUNK", default=7500),
     )
 
 
-def _optional_int(raw_value: str | None, default: int | None = None) -> int | None:
-    if raw_value is None or raw_value == "":
-        return default
-    try:
-        return int(raw_value)
-    except ValueError:
-        logging.warning("Expected integer for value '%s', falling back to %s", raw_value, default)
-        return default
+def _empty_to_none(value: str | None) -> str | None:
+    if value is None:
+        return None
+    value = value.strip()
+    return value or None
 
 
 def resolve_docling_credentials() -> tuple[str, str, str]:
@@ -232,20 +237,32 @@ def resolve_docling_credentials() -> tuple[str, str, str]:
 def main() -> None:
     docling_url, docling_api_key, env_name = resolve_docling_credentials()
 
-    pdf_path = os.getenv("DOCLING_PDF_PATH", r"data\reseau ASF.pdf")
-    poll_interval = float(os.getenv("DOCLING_POLL_INTERVAL", "5"))
-    max_attempts = int(os.getenv("DOCLING_POLL_ATTEMPTS", "40"))
+    pdf_path = read_path("DOCLING_PDF_PATH", "data/reseau ASF.pdf")
+    poll_interval = read_float("DOCLING_POLL_INTERVAL", 5.0) or 5.0
+    max_attempts = read_int("DOCLING_POLL_ATTEMPTS", 40) or 40
     experiment_label = os.getenv("RUN_LABEL")
     run_notes = os.getenv("RUN_NOTES", "")
 
-    client = DoclingClient(docling_url, docling_api_key)
+    start_timeout = read_int("DOCLING_START_TIMEOUT", 120) or 120
+    result_timeout = read_int("DOCLING_RESULT_TIMEOUT", 60) or 60
+    client = DoclingClient(
+        docling_url,
+        docling_api_key,
+        start_timeout=start_timeout,
+        result_timeout=result_timeout,
+    )
     pdf_settings = build_pdf_settings_from_env()
     logging.info(
-        "Docling ENV=%s | URL=%s | PDF=%s | Settings=%s | Run=%s",
+        "Docling ENV=%s | URL=%s | PDF=%s | Settings=%s | Poll=%ss (max %s) | "
+        "Timeouts start=%ss result=%ss | Run=%s",
         env_name,
         docling_url,
         pdf_path,
         pdf_settings,
+        poll_interval,
+        max_attempts,
+        start_timeout,
+        result_timeout,
         experiment_label or "<none>",
     )
 

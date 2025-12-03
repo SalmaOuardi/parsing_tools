@@ -9,7 +9,7 @@ from urllib.parse import parse_qsl
 
 import requests
 
-from env_utils import get_env_value, load_env
+from env_utils import get_env_value, load_env, read_bool, read_int, read_path
 from result_exporter import append_metrics, save_json_payload
 
 '''
@@ -59,15 +59,17 @@ class LLMSherpaClient:
         api_key: str | None,
         endpoint: str,
         extra_params: dict[str, str],
+        timeout: int = 120,
     ):
         self.base_url = base_url.rstrip("/")
         self.api_key = api_key
         self.endpoint = endpoint.strip("/")
         self.extra_params = extra_params
+        self.timeout = timeout
         self._session = requests.Session()
 
     def parse_document(self, pdf_path: str | Path, settings: SherpaSettings) -> dict[str, Any]:
-        pdf_path = Path(pdf_path)
+        pdf_path = Path(pdf_path).expanduser()
         if not pdf_path.exists():
             raise FileNotFoundError(f"PDF file not found: {pdf_path}")
 
@@ -86,7 +88,7 @@ class LLMSherpaClient:
                 params=params,
                 data=data,
                 files=files,
-                timeout=int(os.getenv("LLMSHERPA_TIMEOUT", "120")),
+                timeout=self.timeout,
             )
 
         try:
