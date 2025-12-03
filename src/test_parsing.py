@@ -10,6 +10,7 @@ from typing import Any
 import requests
 
 from env_utils import get_env_value, load_env
+from result_exporter import append_metrics, save_json_payload
 
 '''
 Docling Parsing CLI
@@ -227,13 +228,26 @@ def main() -> None:
         pdf_settings,
     )
 
+    start = time.perf_counter()
     final_result = client.wait_for_completion(
         pdf_path,
         pdf_settings,
         poll_interval=poll_interval,
         max_attempts=max_attempts,
     )
+    duration = time.perf_counter() - start
     logging.info("Docling final result: %s", json.dumps(final_result, indent=2))
+
+    result_path = save_json_payload("docling", pdf_path, final_result)
+    metrics_path = append_metrics(
+        "docling",
+        pdf_path,
+        final_result,
+        duration,
+        extra={"notes": env_name},
+    )
+    logging.info("Saved Docling payload to %s", result_path)
+    logging.info("Appended Docling metrics to %s", metrics_path)
 
 
 if __name__ == "__main__":

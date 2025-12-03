@@ -65,6 +65,7 @@ Flow overview:
 2. Uploads the PDF to `/start-parsing/`. If Docling finishes inline, the final payload is printed immediately.
 3. Otherwise polls `/result-parsing/{task_id}` until completion or until the configured timeout is exceeded.
 4. Logs the final JSON, including chunk metadata ready for downstream RAG steps.
+5. Saves the full JSON response to `data/results/docling_<pdf>_<timestamp>.json` and appends metrics (duration, chunk count, etc.) to `data/results/metrics.csv`.
 
 ### Run the LLM Sherpa CLI
 
@@ -73,6 +74,7 @@ uv run python src/llmsherpa_parsing.py
 ```
 
 This script pushes the PDF (plus layout/chunking preferences) to an LLM Sherpa endpoint and prints back the structured response for quick inspection.
+It also writes the payload under `data/results/llmsherpa_<pdf>_<timestamp>.json` and appends timing/metadata to the shared metrics CSV so you can compare parsers run-by-run.
 
 ### Troubleshooting
 

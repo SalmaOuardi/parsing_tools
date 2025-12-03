@@ -1,6 +1,7 @@
 import json
 import logging
 import os
+import time
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -8,6 +9,7 @@ from typing import Any
 import requests
 
 from env_utils import get_env_value, load_env
+from result_exporter import append_metrics, save_json_payload
 
 '''
 LLM Sherpa Parsing CLI
@@ -91,8 +93,21 @@ def main() -> None:
         pdf_path,
         settings,
     )
+    start = time.perf_counter()
     result = client.parse_document(pdf_path, settings)
+    duration = time.perf_counter() - start
     logging.info("LLM Sherpa response: %s", json.dumps(result, indent=2))
+
+    result_path = save_json_payload("llmsherpa", pdf_path, result)
+    metrics_path = append_metrics(
+        "llmsherpa",
+        pdf_path,
+        result,
+        duration,
+        extra={"notes": f"layout={settings.preserve_layout}"},
+    )
+    logging.info("Saved LLM Sherpa payload to %s", result_path)
+    logging.info("Appended LLM Sherpa metrics to %s", metrics_path)
 
 
 def _optional_int(raw_value: str | None, default: int) -> int:
