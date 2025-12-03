@@ -24,6 +24,22 @@ logging.basicConfig(level=logging.INFO, format=log_format)
 load_env()
 
 
+DOC_ENVIRONMENTS = {
+    "TST": {
+        "url": "https://api-tst.vinci-construction.net/cbai/v1/docling",
+        "api_key_var": "CBAI_API_KEY_TST",
+    },
+    "PPD": {
+        "url": "https://api-ppd.vinci-construction.net/cbai/v1/docling",
+        "api_key_var": "CBAI_API_KEY_PPD",
+    },
+    "PRD": {
+        "url": "https://api.vinci-construction.net/cbai/v1/docling",
+        "api_key_var": "CBAI_API_KEY_PRD",
+    },
+}
+
+
 class ExportType(str, Enum):
     MARKDOWN = "markdown"
     JSON = "json"
@@ -198,13 +214,15 @@ def _optional_int(raw_value: str | None, default: int | None = None) -> int | No
 
 
 def resolve_docling_credentials() -> tuple[str, str, str]:
-    env_name = (os.getenv("DOCLING_ENV") or "CUSTOM").upper()
+    env_name = (os.getenv("DOCLING_ENV") or "TST").upper()
+    env_config = DOC_ENVIRONMENTS.get(env_name)
+    if not env_config:
+        logging.warning("Unknown DOCLING_ENV '%s', falling back to TST", env_name)
+        env_name = "TST"
+        env_config = DOC_ENVIRONMENTS[env_name]
 
-    base_url = os.getenv("DOCLING_URL")
-    if not base_url:
-        raise RuntimeError("Missing DOCLING_URL in environment or .env file")
-
-    api_key_var = os.getenv("DOCLING_API_KEY_VAR", "DOCLING_API_KEY")
+    base_url = os.getenv("DOCLING_URL", env_config["url"])
+    api_key_var = os.getenv("DOCLING_API_KEY_VAR", env_config["api_key_var"])
     api_key = get_env_value(api_key_var)
     if not api_key:
         raise RuntimeError(f"Missing {api_key_var} in environment or .env file")

@@ -32,10 +32,10 @@ This repository contains CLI utilities for exploring document-parsing services (
 
 | Variable | Description |
 | --- | --- |
-| `DOCLING_URL` | Base URL for the Docling API you control (e.g., `https://your-docling-host/v1/docling`). |
-| `DOCLING_API_KEY` | API key/token for the Docling endpoint. |
-| `DOCLING_API_KEY_VAR` | Optional override to read the Docling key from a different env var. |
-| `DOCLING_ENV` | Free-form label used only for logging (`TST`, `PPD`, `local`, etc.). |
+| `CBAI_API_KEY_TST` / `PPD` / `PRD` | Docling API keys for each environment. |
+| `DOCLING_ENV` | Selects which built-in endpoint + key to use (`TST`, `PPD`, `PRD`). Defaults to `TST`. |
+| `DOCLING_URL` | Optional override for the Docling base URL if you have a custom host. |
+| `DOCLING_API_KEY_VAR` | Optional override to point at a different env var for the Docling key. |
 | `DOCLING_PDF_PATH` | PDF path used by `test_parsing.py`. |
 | `DOCLING_EXPORT_TYPE` | Docling export format (`markdown`, `json`). |
 | `DOCLING_CHUNKING_TYPE` | Docling chunking strategy (`hybrid`, `none`, etc.). |
