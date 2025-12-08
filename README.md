@@ -60,7 +60,7 @@ This repository contains CLI utilities for exploring document-parsing services (
 ### Run the Docling CLI
 
 ```powershell
-uv run python src/test_parsing.py
+uv run python -m parsing_tests.cli.docling_runner
 ```
 
 Flow overview:
@@ -74,7 +74,7 @@ Flow overview:
 ### Run the LLM Sherpa CLI
 
 ```powershell
-uv run python src/llmsherpa_parsing.py
+uv run python -m parsing_tests.cli.llmsherpa_runner
 ```
 
 This script pushes the PDF (plus layout/chunking preferences) to an LLM Sherpa endpoint and prints back the structured response for quick inspection.
@@ -87,6 +87,13 @@ Use `LLMSHERPA_ENV` (`TST`, `PPD`, `PRD`) to switch between CBAI environments, o
 - `data/results/metrics.csv` aggregates timings, chunk counts, environments, and notes for both parsers so you can pivot/sort later.
 - Set `RUN_LABEL` for the experiment name (e.g., `docling-1500-vs-sherpa`) and `RUN_NOTES` for extra context (`"Docling chunk=1500 | Sherpa default"`). These values propagate to filenames and the metrics CSV.
 
+### Documentation Map
+
+- `docs/parser_overview.md` – mission context, feature scope, datasets, tooling, configuration, and experiment workflow.
+- `docs/parser_experiments.md` – detailed run log, coverage metrics snapshot, and parser selection rationale.
+- `docs/parser_strategy.md` – observations, next steps, open TODOs, master plan, and references.
+- `docs/parser_playbook.md` – lightweight index pointing at the three documents above.
+
 ### Troubleshooting
 
 - **Auth errors**: Confirm your `*_API_KEY` matches the URL you’re calling and that the header/query format matches what your deployment expects.
@@ -95,9 +102,9 @@ Use `LLMSHERPA_ENV` (`TST`, `PPD`, `PRD`) to switch between CBAI environments, o
 
 ### Project Structure
 
-- `src/test_parsing.py` – Docling helper CLI (async poll + settings builder).
-- `src/llmsherpa_parsing.py` – LLM Sherpa helper CLI (synchronous extraction).
-- `src/env_utils.py` – shared helpers for `.env` loading and key lookup.
+- `src/parsing_tests/cli/docling_runner.py` – Docling helper CLI (async poll + settings builder).
+- `src/parsing_tests/cli/llmsherpa_runner.py` – LLM Sherpa helper CLI (synchronous extraction).
+- `src/parsing_tests/utils/env.py` – shared helpers for `.env` loading and key lookup.
 - `data/` – sample PDFs (ignored from Git). Bring your own documents.
 - `pyproject.toml` – dependency definitions managed by `uv`.
 

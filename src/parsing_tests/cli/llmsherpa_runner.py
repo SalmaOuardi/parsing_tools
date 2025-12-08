@@ -9,8 +9,8 @@ from urllib.parse import parse_qsl
 
 import requests
 
-from env_utils import get_env_value, load_env
-from result_exporter import append_metrics, save_json_payload
+from ..utils.env import get_env_value, load_env
+from ..utils.result_exporter import append_metrics, save_json_payload
 
 '''
 LLM Sherpa Parsing CLI
