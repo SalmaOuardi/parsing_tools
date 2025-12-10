@@ -47,3 +47,13 @@ CSV: `data/results/alliade_comparison_metrics.csv`.
   - `strategy=sections` produced the exact same payload as the baseline (`data/results/sherpa_passthrough_vinci-ccg-180_sections.json`), so that flag doesn’t change coverage either.
   - Adding `pageStart` / `pageEnd` query params had no effect—the API still returned all 180 pages, meaning page slicing isn’t exposed via passthrough today (`data/results/sherpa_passthrough_vinci-ccg-180_pages01-100.json`, `..._pages120-180.json`).
   - Bottom line: `renderFormat=all&strategy=chunks&applyOcr=yes&useNewIndentParser=yes` stays our working config while we design the clause-aware block→chunk layer. We’ll revisit once CBAI/Sherpa offer async or better page control.
+
+### Clause-aware chunking
+- Script: `uv run python -m parsing_tests.analysis.clause_chunker --parser sherpa --file <payload> --chunk-chars 1200 --out <path>`.
+- Example: `llmsherpa_alliade-habitat_no_toc_clause_chunks.json` (154 chunks) lives next to the original Sherpa payload under `data/results/sherpa_passthrough/alliade/`. Each chunk carries `clause_id`, `clause_title`, unit ids, and page coverage so multi-page clauses stay linked even after chunk splits.
+- Next runs: re-use the same command for Docling (pass `--parser docling`) or for other Sherpa payloads (vinci PDF) once we confirm coverage.
+
+### GPT-5 parsing (Azure OpenAI)
+- Config: set `AZURE_OPENAI_ENDPOINT`, `AZURE_OPENAI_API_KEY`, `AZURE_OPENAI_GPT5_DEPLOYMENT`, and optional `AZURE_OPENAI_API_VERSION` in `.env`. Use `GPT_PARSER_PDF_PATH` to point at the PDF plus `GPT_PARSER_IMAGE_DESCRIPTION=true/false` if we want figure placeholders.
+- Command: `uv run python -m parsing_tests.cli.gpt_runner`. Output lands under `data/results/gpt5_<pdf>_<timestamp>.json` with one Markdown chunk per page (`payload["chunks"]`).
+- Once a GPT payload is saved we can feed it into `clause_chunker.py` (use `--parser docling`) to add clause metadata and compare coverage against Docling/Sherpa runs.

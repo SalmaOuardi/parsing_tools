@@ -28,6 +28,8 @@ This doc covers F1.
   - `parsing_tests/utils/result_exporter.py` (JSON export + metrics append).
   - `parsing_tests/cli/remove_toc.py` (TOC stripping).
   - `parsing_tests/analysis/coverage_cli.py` (coverage metrics from saved payloads).
+  - `parsing_tests/analysis/clause_chunker.py` (turn parser payloads into clause-aware chunks with inherited metadata).
+  - `parsing_tests/cli/gpt_runner.py` + `parsing_tests/gpt/page_parser.py` (GPT‑5 vision parsing via Azure OpenAI).
 
 ### 5. Config knobs
 Set these in `.env` (copy `.env.example` first):
@@ -41,6 +43,8 @@ Set these in `.env` (copy `.env.example` first):
 | `LLMSHERPA_ENDPOINT`, `LLMSHERPA_QUERY` | Choose wrapper vs passthrough + params (`renderFormat=all&strategy=chunks…`). |
 | `LLMSHERPA_PDF_PATH`, `LLMSHERPA_CHUNK_SIZE`, `LLMSHERPA_CHUNK_OVERLAP`, `LLMSHERPA_TIMEOUT` | Sherpa input + chunk tuneables. |
 | `RUN_LABEL`, `RUN_NOTES` | Required for clean filenames and metrics rows. |
+| `GPT_PARSER_PDF_PATH`, `GPT_PARSER_IMAGE_DESCRIPTION`, `GPT_PARSER_EXTRA_INSTRUCTION` | Control which PDF GPT-5 parses and whether it should describe or strip images. |
+| `AZURE_OPENAI_ENDPOINT`, `AZURE_OPENAI_API_KEY`, `AZURE_OPENAI_GPT5_DEPLOYMENT`, `AZURE_OPENAI_API_VERSION` | Azure OpenAI config for GPT-5 parsing. |
 
 ### 6. Running experiments
 1. Set `RUN_LABEL` / `RUN_NOTES`.
