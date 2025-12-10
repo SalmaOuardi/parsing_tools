@@ -103,7 +103,8 @@ def main() -> None:
     base_url, api_key, env_name = resolve_llmsherpa_credentials()
     endpoint = os.getenv("LLMSHERPA_ENDPOINT", "parsing/")
     extra_params = parse_extra_params(os.getenv("LLMSHERPA_QUERY"))
-    pdf_path = os.getenv("LLMSHERPA_PDF_PATH", r"data/sample.pdf")
+    raw_pdf_path = get_env_value("LLMSHERPA_PDF_PATH")
+    pdf_path = (raw_pdf_path if raw_pdf_path is not None else r"data/sample.pdf").strip()
     experiment_label = os.getenv("RUN_LABEL")
     run_notes = os.getenv("RUN_NOTES", "")
 

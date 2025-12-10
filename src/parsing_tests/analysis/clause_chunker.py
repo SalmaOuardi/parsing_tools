@@ -8,7 +8,10 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Iterable, List, Optional, Sequence
 
-HEADING_REGEX = re.compile(r"^\s*(\d+(?:\.\d+)+)\s+(.*)")
+HEADING_REGEXES = [
+    re.compile(r"^\s*(\d+(?:\.\d+)+)\s+(.*)"),  # e.g., 12.2.2 Title
+    re.compile(r"^\s*(ARTICLE\s+\d+(?:\.\d+)*)(?:\s*[-:])?\s+(.*)", re.IGNORECASE),
+]
 
 
 @dataclass
@@ -61,10 +64,15 @@ def iter_sherpa_units(path: Path) -> Iterable[SourceUnit]:
 
 def extract_heading(text: str) -> Optional[tuple[str, str]]:
     first_line = text.splitlines()[0].strip()
-    match = HEADING_REGEX.match(first_line)
-    if not match:
-        return None
-    return match.group(1), first_line
+    for regex in HEADING_REGEXES:
+        match = regex.match(first_line)
+        if match:
+            trailing_token = first_line.rstrip().split()[-1]
+            if trailing_token.replace(".", "").isdigit():
+                # Likely a table-of-contents entry (ends with a page number); skip.
+                continue
+            return match.group(1), first_line
+    return None
 
 
 def build_clauses(units: Iterable[SourceUnit]) -> List[Clause]:

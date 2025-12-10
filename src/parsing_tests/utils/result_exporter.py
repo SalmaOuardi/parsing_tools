@@ -11,10 +11,11 @@ RESULTS_DIR.mkdir(parents=True, exist_ok=True)
 
 def save_json_payload(
     parser_name: str,
-    pdf_path: str,
+    pdf_path: str | Path,
     payload: dict[str, Any],
     experiment: str | None = None,
 ) -> Path:
+    pdf_path = _normalize_path_value(pdf_path)
     timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
     pdf_stem = Path(pdf_path).stem.replace(" ", "_")
     suffix = f"_{_sanitize(experiment)}" if experiment else ""
@@ -26,13 +27,14 @@ def save_json_payload(
 
 def append_metrics(
     parser_name: str,
-    pdf_path: str,
+    pdf_path: str | Path,
     payload: dict[str, Any],
     duration_seconds: float,
     parser_env: str | None = None,
     experiment: str | None = None,
     extra: dict[str, Any] | None = None,
 ) -> Path:
+    pdf_path = _normalize_path_value(pdf_path)
     csv_path = RESULTS_DIR / "metrics.csv"
     fieldnames = [
         "timestamp",
@@ -120,3 +122,7 @@ def _sanitize(value: str | None) -> str:
     if not value:
         return ""
     return "".join(ch if ch.isalnum() or ch in ("-", "_") else "-" for ch in value.strip())
+
+
+def _normalize_path_value(pdf_path: str | Path) -> str:
+    return str(pdf_path).strip()

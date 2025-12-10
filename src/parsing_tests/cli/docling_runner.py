@@ -232,7 +232,8 @@ def resolve_docling_credentials() -> tuple[str, str, str]:
 def main() -> None:
     docling_url, docling_api_key, env_name = resolve_docling_credentials()
 
-    pdf_path = os.getenv("DOCLING_PDF_PATH", r"data\reseau ASF.pdf")
+    raw_pdf_path = get_env_value("DOCLING_PDF_PATH")
+    pdf_path = (raw_pdf_path if raw_pdf_path is not None else r"data\reseau ASF.pdf").strip()
     poll_interval = float(os.getenv("DOCLING_POLL_INTERVAL", "5"))
     max_attempts = int(os.getenv("DOCLING_POLL_ATTEMPTS", "40"))
     experiment_label = os.getenv("RUN_LABEL")

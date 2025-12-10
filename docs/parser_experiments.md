@@ -52,8 +52,9 @@ CSV: `data/results/alliade_comparison_metrics.csv`.
 - Script: `uv run python -m parsing_tests.analysis.clause_chunker --parser sherpa --file <payload> --chunk-chars 1200 --out <path>`.
 - Example: `llmsherpa_alliade-habitat_no_toc_clause_chunks.json` (154 chunks) lives next to the original Sherpa payload under `data/results/sherpa_passthrough/alliade/`. Each chunk carries `clause_id`, `clause_title`, unit ids, and page coverage so multi-page clauses stay linked even after chunk splits.
 - Next runs: re-use the same command for Docling (pass `--parser docling`) or for other Sherpa payloads (vinci PDF) once we confirm coverage.
+- Docling example: `uv run python -m parsing_tests.analysis.clause_chunker --parser docling --file data/results/docling/vinci-ccg-180/vinci-ccg-180.json --out data/results/docling/vinci-ccg-180/vinci-ccg-180_clause_chunks.json` (253 clause chunks; first clause = `ARTICLE 1`, page 15). Docling headings use `ARTICLE n` format, so the chunker now detects that pattern in addition to numeric clause IDs.
 
 ### GPT-5 parsing (Azure OpenAI)
 - Config: set `AZURE_OPENAI_ENDPOINT`, `AZURE_OPENAI_API_KEY`, `AZURE_OPENAI_GPT5_DEPLOYMENT`, and optional `AZURE_OPENAI_API_VERSION` in `.env`. Use `GPT_PARSER_PDF_PATH` to point at the PDF plus `GPT_PARSER_IMAGE_DESCRIPTION=true/false` if we want figure placeholders.
-- Command: `uv run python -m parsing_tests.cli.gpt_runner`. Output lands under `data/results/gpt5_<pdf>_<timestamp>.json` with one Markdown chunk per page (`payload["chunks"]`).
+- Command: `uv run python -m parsing_tests.cli.gpt_runner`. Output lands under `data/results/gpt/<pdf_slug>/gpt5_<pdf_slug>_<timestamp>.json` with one Markdown chunk per page (`payload["chunks"]`).
 - Once a GPT payload is saved we can feed it into `clause_chunker.py` (use `--parser docling`) to add clause metadata and compare coverage against Docling/Sherpa runs.

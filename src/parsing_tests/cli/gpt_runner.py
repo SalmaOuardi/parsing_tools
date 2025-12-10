@@ -12,7 +12,7 @@ def _str_to_bool(value: str | None) -> bool:
 
 def main() -> None:
     load_env()
-    pdf_path = os.getenv("GPT_PARSER_PDF_PATH", "data/sample.pdf")
+    pdf_path = (os.getenv("GPT_PARSER_PDF_PATH") or "data/sample.pdf").strip()
     experiment_label = os.getenv("RUN_LABEL")
     run_notes = os.getenv("RUN_NOTES", "")
     image_description = _str_to_bool(os.getenv("GPT_PARSER_IMAGE_DESCRIPTION"))
