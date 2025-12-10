@@ -41,12 +41,12 @@ Tools and experiment logs for evaluating structure-aware PDF parsing when contra
 - GPT-5 vision runner is available as a fallback/parser comparison; use `clause_chunker` to align its output with other parsers.
 
 ### Documentation map
-- `docs/parser_overview.md` – mission, scope, corpus, tooling, config.
-- `docs/parser_playbook.md` – feature plan and process at a glance.
+- `docs/parser_overview.md` – mission, scope, corpus, tooling, config, current status, phase plan.
+- `docs/parser_playbook.md` – doc index (what lives where and when to update).
 - `docs/parser_experiments.md` – run history, coverage snapshots, Sherpa/Vinci notes.
-- `docs/parser_strategy.md` – observations, next steps, master plan.
+- `docs/parser_strategy.md` – decision snapshot + near-term actions.
 - `docs/parser_clause_comparison.md` – clause-aware chunking rationale.
-- `docs/todo.md`, `docs/weekly_updates_*.md`, `docs/progress_*.md` – backlog and progress logs.
+- `docs/todo.md`, `docs/weekly_updates_*.md`, `docs/progress_*.md` – backlog and dated progress logs.
 
 ### Troubleshooting tips
 - Auth: ensure env keys match the target endpoint; override `*_API_KEY_VAR` if using non-CBAI vars.
