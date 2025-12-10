@@ -1,115 +1,54 @@
-## PDF Parsing Playground
+## Aria TOC-less Parsing Playground
 
-This repository contains CLI utilities for exploring document-parsing services (Docling and LLM Sherpa) as part of a retrieval-augmented generation (RAG) workflow. Each script sends a PDF to the respective service, handles authentication/polling, and logs the structured output so you can experiment locally without exposing private client infrastructure.
+Tools and experiment logs for evaluating structure-aware PDF parsing when contracts lack a clean table of contents. We compare Docling, LLM Sherpa passthrough, and a GPT-5 fallback, export their payloads, and compute coverage/chunking metrics for Aria’s 40-question legal RAG workflow.
 
 ### Prerequisites
-
-- Python 3.11.x
-- [`uv`](https://github.com/astral-sh/uv) for dependency management
+- Python 3.11
+- [`uv`](https://github.com/astral-sh/uv) for dependency and runner tooling
 
 ### Setup
+1. Install deps: `uv sync` (or `uv pip install -r pyproject.toml`).
+2. Copy `.env.example` → `.env` and fill keys + parser settings. At minimum set:
+   - `CBAI_API_KEY_TST` / `CBAI_API_KEY_PPD` / `CBAI_API_KEY_PRD`
+   - `DOCLING_ENV`, `DOCLING_PDF_PATH`
+   - `LLMSHERPA_ENV`, `LLMSHERPA_PDF_PATH`
+   - `RUN_LABEL` / `RUN_NOTES` for clean filenames and metrics rows
 
-1. Install dependencies:
+### Key environment variables
+- **Docling**: `DOCLING_ENV`, `DOCLING_URL`, `DOCLING_API_KEY_VAR`, `DOCLING_PDF_PATH`, `DOCLING_EXPORT_TYPE`, `DOCLING_CHUNKING_TYPE`, `DOCLING_MAX_TOKEN_PER_CHUNK`, `DOCLING_POLL_INTERVAL`, `DOCLING_POLL_ATTEMPTS`.
+- **LLM Sherpa**: `LLMSHERPA_ENV`, `LLMSHERPA_URL`, `LLMSHERPA_API_KEY_VAR`, `LLMSHERPA_ENDPOINT` (`parsing/` vs `passthrough/api/parseDocument`), `LLMSHERPA_QUERY` (e.g., `renderFormat=all&strategy=chunks&applyOcr=yes`), `LLMSHERPA_PDF_PATH`, `LLMSHERPA_CHUNK_SIZE`, `LLMSHERPA_CHUNK_OVERLAP`, `LLMSHERPA_TIMEOUT`.
+- **GPT-5 vision parser**: `GPT_PARSER_PDF_PATH`, `GPT_PARSER_IMAGE_DESCRIPTION`, `GPT_PARSER_EXTRA_INSTRUCTION`, plus `AZURE_OPENAI_ENDPOINT`, `AZURE_OPENAI_API_KEY`, `AZURE_OPENAI_GPT5_DEPLOYMENT`, `AZURE_OPENAI_API_VERSION`.
+- **Experiment labels**: `RUN_LABEL`, `RUN_NOTES` are recorded in filenames and `metrics.csv`.
 
-   ```powershell
-   uv pip install -r pyproject.toml
-   ```
+### CLI entry points (via `uv run python -m ...`)
+- `parsing_tests.cli.docling_runner` – Docling start/poll flow; saves JSON and appends metrics.
+- `parsing_tests.cli.llmsherpa_runner` – Sherpa wrapper or passthrough call; supports full render + OCR via `LLMSHERPA_QUERY`.
+- `parsing_tests.cli.gpt_runner` – GPT-5 vision parsing through Azure OpenAI; emits one Markdown chunk per page.
+- `parsing_tests.cli.remove_toc` – clones a PDF without its TOC for TOC-less benchmarks.
+- `parsing_tests.analysis.coverage_cli` – computes coverage CSVs from saved payloads.
+- `parsing_tests.analysis.clause_chunker` – converts Docling/Sherpa/GPT payloads into clause-aware chunks with inherited metadata.
 
-2. Create a `.env` file (based on `.env.example`) and add your API keys + runtime overrides. Example:
+### Data & outputs
+- PDFs live under `data/` (gitignored). Primary sample: `data/reseau ASF.pdf`; Alliade and Vinci samples used in experiments.
+- Parser payloads: `data/results/<parser>_<pdf>_<timestamp>_{RUN_LABEL}.json`.
+- Metrics log: `data/results/metrics.csv` with timestamp, parser, env, duration, exec time, chunk count, notes.
+- Coverage exports: run `coverage_cli` to produce comparison CSVs; clause-aware chunks sit next to their source payloads.
 
-   ```dotenv
-   CBAI_API_KEY_TST="..."
-   CBAI_API_KEY_PPD="..."
-   CBAI_API_KEY_PRD="..."
+### Current findings
+- Docling reliably parses full contracts (TOC or not) and outputs Markdown chunks; tuning `DOCLING_MAX_TOKEN_PER_CHUNK` balances latency vs retrieval fidelity.
+- Sherpa default `/parsing/` truncates early; passthrough with `renderFormat=all&strategy=chunks&applyOcr=yes` completes quickly on medium PDFs and exposes clause metadata but can time out (504) on larger files.
+- Clause-aware chunking is being built on top of Sherpa/Docling payloads to preserve section boundaries through downstream chunk splits.
+- GPT-5 vision runner is available as a fallback/parser comparison; use `clause_chunker` to align its output with other parsers.
 
-   DOCLING_ENV=TST
-   DOCLING_PDF_PATH="data/reseau ASF.pdf"
-   DOCLING_POLL_INTERVAL=10
-   DOCLING_POLL_ATTEMPTS=120
-   ```
+### Documentation map
+- `docs/parser_overview.md` – mission, scope, corpus, tooling, config.
+- `docs/parser_playbook.md` – feature plan and process at a glance.
+- `docs/parser_experiments.md` – run history, coverage snapshots, Sherpa/Vinci notes.
+- `docs/parser_strategy.md` – observations, next steps, master plan.
+- `docs/parser_clause_comparison.md` – clause-aware chunking rationale.
+- `docs/todo.md`, `docs/weekly_updates_*.md`, `docs/progress_*.md` – backlog and progress logs.
 
-### Environment Variables
-
-| Variable | Description |
-| --- | --- |
-| `CBAI_API_KEY_TST` / `PPD` / `PRD` | Docling API keys for each environment. |
-| `DOCLING_ENV` | Selects which built-in endpoint + key to use (`TST`, `PPD`, `PRD`). Defaults to `TST`. |
-| `DOCLING_URL` | Optional override for the Docling base URL if you have a custom host. |
-| `DOCLING_API_KEY_VAR` | Optional override to point at a different env var for the Docling key. |
-| `DOCLING_PDF_PATH` | PDF path used by `test_parsing.py`. |
-| `DOCLING_EXPORT_TYPE` | Docling export format (`markdown`, `json`). |
-| `DOCLING_CHUNKING_TYPE` | Docling chunking strategy (`hybrid`, `none`, etc.). |
-| `DOCLING_PICTURE_MODEL` | Optional Docling model for picture descriptions. |
-| `DOCLING_PICTURE_PROMPT` | Picture description prompt. |
-| `DOCLING_MAX_TOKEN_PER_CHUNK` | Integer cap for Docling chunk tokens. |
-| `DOCLING_POLL_INTERVAL` | Seconds between Docling status checks. |
-| `DOCLING_POLL_ATTEMPTS` | Number of Docling polls before timing out. |
-| `LLMSHERPA_URL` | Base URL for your LLM Sherpa service (e.g., `https://llmsherpa.yourdomain/api`). |
-| `LLMSHERPA_ENV` | Selects which CBAI endpoint to use for LLM Sherpa (`TST`, `PPD`, `PRD`). |
-| `LLMSHERPA_URL` | Optional override for the base path (defaults to the env-specific `/cbai/v1/llm_sherpa`). |
-| `LLMSHERPA_API_KEY_VAR` | Env var that stores the LLM Sherpa key (defaults to the matching `CBAI_API_KEY_*`). |
-| `LLMSHERPA_ENDPOINT` | Relative endpoint appended to the base URL (`parsing/`, `passthrough/api/...`, etc.). |
-| `LLMSHERPA_QUERY` | URL-encoded query string for additional Sherpa parameters (`renderFormat=all&applyOcr=no`). |
-| `LLMSHERPA_PDF_PATH` | PDF path used by `llmsherpa_parsing.py`. |
-| `LLMSHERPA_PRESERVE_LAYOUT` | `true/false` to keep layout metadata. |
-| `LLMSHERPA_CHUNK_SIZE` | Chunk token size for Sherpa responses. |
-| `LLMSHERPA_CHUNK_OVERLAP` | Token overlap between Sherpa chunks. |
-| `LLMSHERPA_TIMEOUT` | Request timeout (seconds) for Sherpa calls. |
-| `RUN_LABEL` / `RUN_NOTES` | Optional experiment identifiers recorded in filenames and `metrics.csv` for later analysis. |
-
-### Run the Docling CLI
-
-```powershell
-uv run python -m parsing_tests.cli.docling_runner
-```
-
-Flow overview:
-
-1. Selects the Docling environment (`DOCLING_URL` + key) and logs the current settings.
-2. Uploads the PDF to `/start-parsing/`. If Docling finishes inline, the final payload is printed immediately.
-3. Otherwise polls `/result-parsing/{task_id}` until completion or until the configured timeout is exceeded.
-4. Logs the final JSON, including chunk metadata ready for downstream RAG steps.
-5. Saves the full JSON response to `data/results/docling_<pdf>_<timestamp>.json` and appends metrics (duration, chunk count, etc.) to `data/results/metrics.csv`.
-
-### Run the LLM Sherpa CLI
-
-```powershell
-uv run python -m parsing_tests.cli.llmsherpa_runner
-```
-
-This script pushes the PDF (plus layout/chunking preferences) to an LLM Sherpa endpoint and prints back the structured response for quick inspection.
-It also writes the payload under `data/results/llmsherpa_<pdf>_<timestamp>.json` and appends timing/metadata to the shared metrics CSV so you can compare parsers run-by-run.
-Use `LLMSHERPA_ENV` (`TST`, `PPD`, `PRD`) to switch between CBAI environments, or provide a custom `LLMSHERPA_URL`/`LLMSHERPA_ENDPOINT` for passthrough calls (e.g., `/passthrough/api/parseDocument?renderFormat=all`).
-
-### Tracking Experiments
-
-- Every run stores the raw payload in `data/results/<parser>_<pdf>_<timestamp>_{RUN_LABEL}.json`.
-- `data/results/metrics.csv` aggregates timings, chunk counts, environments, and notes for both parsers so you can pivot/sort later.
-- Set `RUN_LABEL` for the experiment name (e.g., `docling-1500-vs-sherpa`) and `RUN_NOTES` for extra context (`"Docling chunk=1500 | Sherpa default"`). These values propagate to filenames and the metrics CSV.
-
-### Documentation Map
-
-- `docs/parser_overview.md` – mission context, feature scope, datasets, tooling, configuration, and experiment workflow.
-- `docs/parser_experiments.md` – detailed run log, coverage metrics snapshot, and parser selection rationale.
-- `docs/parser_strategy.md` – observations, next steps, open TODOs, master plan, and references.
-- `docs/parser_playbook.md` – lightweight index pointing at the three documents above.
-
-### Troubleshooting
-
-- **Auth errors**: Confirm your `*_API_KEY` matches the URL you’re calling and that the header/query format matches what your deployment expects.
-- **Long PDFs**: Increase `DOCLING_POLL_INTERVAL`/`DOCLING_POLL_ATTEMPTS` or Sherpa chunk sizes for better throughput.
-- **Different endpoints**: Override `DOCLING_URL` or `LLMSHERPA_URL` to point at staging/local servers without editing the source.
-
-### Project Structure
-
-- `src/parsing_tests/cli/docling_runner.py` – Docling helper CLI (async poll + settings builder).
-- `src/parsing_tests/cli/llmsherpa_runner.py` – LLM Sherpa helper CLI (synchronous extraction).
-- `src/parsing_tests/utils/env.py` – shared helpers for `.env` loading and key lookup.
-- `data/` – sample PDFs (ignored from Git). Bring your own documents.
-- `pyproject.toml` – dependency definitions managed by `uv`.
-
-### Contributing
-
-- Keep actual credentials in `.env`; share sanitized examples via `.env.example`.
-- Use `uv` for dependency management and add tests/linters as the playground grows.
-- Feel free to extend either CLI or add adapters for additional parsers in the RAG toolchain.
+### Troubleshooting tips
+- Auth: ensure env keys match the target endpoint; override `*_API_KEY_VAR` if using non-CBAI vars.
+- Long runs/timeouts: raise `DOCLING_POLL_ATTEMPTS`/`INTERVAL`; for Sherpa passthrough, try lighter `LLMSHERPA_QUERY` or smaller PDFs if you hit 504s.
+- Output coverage: run `coverage_cli` against saved payloads to verify page coverage and chunk counts before RAG retrieval tests.
